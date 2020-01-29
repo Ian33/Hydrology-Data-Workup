@@ -1,0 +1,102 @@
+@author: ianrh
+"""
+
+import os
+
+import matplotlib.pyplot as plt
+from datetime import datetime
+from datetime import date
+from datetime import timedelta
+import numpy as np
+
+import pandas as pd
+
+from matplotlib import pyplot as plt
+
+'''
+x = [1, 2, 3]
+y = [1, 4, 9]
+z = [10, 5, 0]
+plt.plot (x, z)
+plt.plot(x, y)
+plt.show()
+'''
+
+import plotly.io as pio #plotly renderer
+pio.renderers.default = "browser"
+
+import plotly.graph_objects as go
+
+
+os.chdir('C:/Users/ianrh/Documents')
+
+onset = 'onsettest.csv'
+
+
+'''
+df1 = pathdata
+df2 = pathbaro
+'''
+
+df1 = pd.read_csv(onset, usecols=[1,2,3])
+
+
+
+
+df1.columns = ['Date_Time', 'ABS_Pressure', 'Temp']
+#df1 = pd.Index.drop(df1, labels='ignore', errors='raise')
+df1['Date_Time'] = pd.to_datetime(df1['Date_Time'])
+
+df1.set_index('Date_Time', inplace=True)
+
+
+print(df1)
+
+
+head = df1.head(1)
+head.reset_index(inplace=True)
+head_string=pd.DataFrame.to_string(head, buf=None, columns=['Date_Time'], index=None, header=None)
+head_date=pd.to_datetime(head_string)
+head_for_sql=datetime.date(head_date)
+
+head_year = head_for_sql.strftime('%Y')
+head_month = head_for_sql.strftime('%m')
+head_day = head_for_sql.strftime('%d')
+head_sql = head_year+"/"+head_month+"/"+head_day
+
+
+
+
+tail = df1.tail(1)
+tail.reset_index(inplace=True)
+tail_string=pd.DataFrame.to_string(tail, buf=None, columns=['Date_Time'], index=None, header=None)
+tail_date=pd.to_datetime(tail_string) 
+tail_for_sql=datetime.date(tail_date) + timedelta(days=1)
+
+tail_year = tail_for_sql.strftime('%Y')
+tail_month = tail_for_sql.strftime('%m')
+tail_day = tail_for_sql.strftime('%d')
+tail_sql = tail_year+"/"+tail_month+"/"+tail_day
+
+
+
+print("Head")
+print(head)
+print("Head String")
+print(head_string)
+print("head date")
+print(head_date)
+print("Head for sql")
+print(head_for_sql)
+print("tail")
+print(tail)
+print("tail string")
+print(tail_string)
+print("tail date")
+print(tail_date)
+print(tail_for_sql)
+print(tail_year)
+print(tail_month)
+print(tail_day)
+print(head_sql)
+print(tail_sql)
