@@ -1,0 +1,970 @@
+"""
+Created on Tue Nov 19 19:02:51 2019
+
+@author: ianrh
+"""
+import webbrowser
+import os
+from datetime import date
+import tkinter
+import fuzzy_pandas as fpd
+import tkinter as tk
+from tkinter import ttk
+import tkinter as tk
+from tkinter import ttk
+import matplotlib.pyplot as plt
+from subprocess import call
+import numpy as np
+import matplotlib.pyplot as plt
+
+import pyodbc
+from scipy import stats
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
+
+import pandas as pd
+
+from matplotlib import pyplot as plt
+
+
+from tkinter import *
+from tkinter.ttk import *
+
+import matplotlib
+
+
+#from matplotlib.backends.backend_tkagg import (
+   # FigureCanvasTkAgg, NavigationToolbar2Tk)
+# Implement the default Matplotlib key bindings.
+from matplotlib.backend_bases import key_press_handler
+from matplotlib.figure import Figure
+
+import numpy as np
+#matplotlib.use("TkAgg")
+#from matplotlib.figure import Figure
+#from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+'''
+x = [1, 2, 3]
+y = [1, 4, 9]
+z = [10, 5, 0]
+plt.plot (x, z)
+plt.plot(x, y)
+plt.show()
+'''
+
+import plotly.io as pio #plotly renderer
+pio.renderers.default = "browser"
+
+import plotly.graph_objects as go
+
+
+
+import tkinter as tk
+from tkinter import simpledialog
+
+
+
+from tkinter import *   ## notice lowercase 't' in tkinter here
+from tkinter import filedialog
+import pandas as pd
+from datetime import datetime
+from datetime import timedelta
+
+import subprocess, sys
+Tk().withdraw()
+filename = filedialog.askopenfilename(initialdir = "W:\STS\hydro\GAUGE\Temp\Ian's Temp", title="Select original line file:", filetypes = (("CSV files","*.csv"),("all files","*.*"))) # show an "Open" dialog box and return the path to the selected file
+
+
+
+df1 = pd.read_csv(filename, header=None, skiprows=[0,1], usecols=[1,2,3])
+raw_title = pd.read_csv(filename, nrows=1, usecols=[1])
+print('raw title')
+print(raw_title)
+
+ROOT = tk.Tk()
+
+ROOT.withdraw()
+
+File_Type = df1.iloc[0,0]
+
+print("File Shape")
+print(File_Type)
+
+
+
+import pyodbc
+import pandas as pd
+
+
+import tkinter as tk
+from tkinter import simpledialog
+
+#df = pd.read_csv(path)
+
+
+
+#os.chdir("W:\STS\hydro\GAUGE\Temp\Ian's Temp")
+
+
+conn = pyodbc.connect('Driver={SQL Server};'
+                      'Server=NNNN;'
+                      'Database=gData;'
+                      'Trusted_Connection=yes;')
+
+ROOT = tk.Tk()
+
+ROOT.withdraw()
+# the input dialog
+
+
+###query barro#####
+Site = simpledialog.askstring(title="Test",
+                                  prompt=raw_title)
+
+
+
+Gage_Lookup = pd.read_sql_query('select G_ID, SITE_CODE, SITE_NAME, GAGETAG from tblGaugeLLID;',conn)
+Gage_Lookup.reset_index()
+
+Gage_Lookup['G_ID_STR'] = Gage_Lookup['G_ID'].apply(str)
+
+search = Gage_Lookup.loc[Gage_Lookup['SITE_CODE'].isin([Site])]
+
+G_ID_Lookup = search.iloc[0,0]
+G_Type = search.iloc[0,3]
+
+
+Baro_Gage = pd.read_sql_query('select WaterLevel_GID, Airpressure_GID from tblBaroLoggerAssociation;',conn)
+Baro_Gage.reset_index()
+
+Baro_Gage_search = Baro_Gage.loc[Baro_Gage['WaterLevel_GID'].isin([G_ID_Lookup])]
+
+
+Baro_ID = Baro_Gage_search.iloc[0,1]
+Baro_ID_STR = Baro_ID.astype(str)
+print(Baro_ID)
+
+
+my_title = Site
+
+
+
+
+df1.columns = ['Date_Time', 'ABS_Pressure', 'Temp']
+#df1 = pd.Index.drop(df1, labels='ignore', errors='raise')
+df1['Date_Time'] = pd.to_datetime(df1['Date_Time'])
+
+df1.set_index('Date_Time', inplace=True)
+df1.dropna(inplace=True)
+
+print(df1)
+
+
+
+head = df1.head(1)
+head.reset_index(inplace=True)
+head_string=pd.DataFrame.to_string(head, buf=None, columns=['Date_Time'], index=None, header=None)
+head_date=pd.to_datetime(head_string)
+head_for_sql=datetime.date(head_date)
+
+head_year = head_for_sql.strftime('%Y')
+head_month = head_for_sql.strftime('%m')
+head_day = head_for_sql.strftime('%d')
+head_sql = head_year+"-"+head_month+"-"+head_day
+#just used to make a pretty title
+head_graph = head_year+"/"+head_month+"/"+head_day
+
+
+
+
+tail = df1.tail(1)
+tail.reset_index(inplace=True)
+tail_string=pd.DataFrame.to_string(tail, buf=None, columns=['Date_Time'], index=None, header=None)
+tail_date=pd.to_datetime(tail_string) 
+tail_for_sql=datetime.date(tail_date) + timedelta(days=1)
+
+tail_year = tail_for_sql.strftime('%Y')
+tail_month = tail_for_sql.strftime('%m')
+tail_day = tail_for_sql.strftime('%d')
+tail_sql = tail_year+"-"+tail_month+"-"+tail_day
+
+tail_for_graph=datetime.date(tail_date)
+
+tail_graph_year = tail_for_graph.strftime('%Y')
+tail_graph_month = tail_for_graph.strftime('%m')
+tail_graph_day = tail_for_graph.strftime('%d')
+
+
+#just used to make a pretty title
+tail_graph = tail_graph_year+"/"+tail_graph_month+"/"+tail_graph_day
+
+#file format for tail date
+tail_file = tail_graph_year+"_"+tail_graph_month+"_"+tail_graph_day
+
+
+
+print("Head")
+print(head)
+print("Head String")
+print(head_string)
+print("head date")
+print(head_date)
+print("Head for sql")
+print(head_for_sql)
+print("tail")
+print(tail)
+print("tail string")
+print(tail_string)
+print("tail date")
+print(tail_date)
+print(tail_for_sql)
+print(tail_year)
+print(tail_month)
+print(tail_day)
+print(head_sql)
+print(tail_sql)
+
+
+
+conn = pyodbc.connect('Driver={SQL Server};'
+                      'Server=NRDOSQLPrX01;'
+                      'Database=gData;'
+                      'Trusted_Connection=yes;')
+
+
+SQL_Query = pd.read_sql_query('select B_TimeDate, B_Value from tblBarometerGauging WHERE G_ID = '+Baro_ID_STR+' AND B_TimeDate >'+head_sql+';',conn)
+#SQL_Query = pd.read_sql_query('select B_TimeDate, B_Value from tblBarometerGauging WHERE G_ID = '+Baro_ID_STR+' AND B_TimeDate >'+head_sql+';',conn, parse_dates=['B_TimeDate'])
+print('SQL Query')
+print(SQL_Query)
+
+print('queried baro')
+
+SQL_Query['B_TimeDate'] = pd.to_datetime(SQL_Query['B_TimeDate'])
+
+
+
+
+mask = (SQL_Query['B_TimeDate'] > head_sql) & (SQL_Query['B_TimeDate'] < tail_sql)
+df2 = SQL_Query.loc[mask].copy()
+
+
+
+df2.columns = ['Date_Time', 'Baro Millibar']
+df2['Date_Time_Origional']=df2['Date_Time']
+#df1 = pd.Index.drop(df1, labels='ignore', errors='raise')
+df2['Date_Time'] = pd.to_datetime(df2['Date_Time'] - timedelta(hours=7))
+
+df2['Baro PSI'] = df2['Baro Millibar']*0.0145038
+#df2['Baro PSI'] = df2['Baro PSI'].round(decimals = 2)
+df2.set_index('Date_Time', inplace=True)
+df2_5min= df2.resample('15T').interpolate(method='linear')
+#df2_5min=df2
+
+print('milibar conversion')
+
+
+df1.reset_index(level=None, drop=False, inplace=True)
+df2_5min.reset_index(level=None, drop=False, inplace=True)
+print('df1')
+print(df1)
+print('df2_5min')
+print (df2_5min)
+
+df3 = pd.merge(df1,
+                 df2_5min[['Date_Time', 'Baro PSI']],
+                 on=['Date_Time'])
+
+df3['Pressure Difference'] = df3['ABS_Pressure'] - df3['Baro PSI']
+
+df3['WL FEET'] = (df3['ABS_Pressure'] - df3['Baro PSI'])*2.307
+
+df3['WL FEET'] = df3['WL FEET'].round(decimals=3)
+
+
+df3head = df3.head(1)
+
+df3tail = df3.tail(1)
+
+
+
+df3['Date_Time_String']=df3['Date_Time'].dt.strftime("%m/%d/%Y %H:%M:%S")
+output = df3[['Date_Time_String','WL FEET','Temp']].copy()
+
+
+
+print('output')
+print(output)
+print('baro conversion complete')
+print('Gage type')
+print(G_Type)
+
+########################## RECALL OLD DATA ####################################
+'''
+End = df3.iloc[0, 0] - timedelta(days=1)
+
+End + timedelta(hours=7)
+End_DateTime = End.strftime("%Y-%m-%d %H:%M:%S")
+
+print('end')
+print(End)
+if G_Type == 'Stream Gauge(Recording)':
+    print('Stream Gauge(Recording)')
+    Old_Data = pd.read_sql_query('select G_ID, D_TimeDate, D_UTCOffset, D_Value, D_Stage, D_Discharge, D_Est, D_Lock, D_Warning, AutoDTStamp, D_DischargeRecID, D_Provisional from tblDischargeGauging WHERE G_ID = '+str(G_ID_Lookup)+';',conn)
+    print('old_data')
+    print(Old_Data)
+elif G_Type == 'Crest/Staff Gauge':
+    print('Crest/Staff Gauge')
+
+elif G_Type == 'Groundwater Observation Well(Recording)':
+    print('Groundwater Observation Well(Recording)')
+
+'''
+
+####### GET FIELD OBSERVATIONS ################################################
+
+
+
+
+
+
+print('DF3')
+
+#df3['Date'] = df3['Date_Time'].dt.date
+#df3['Date'] = df3['Date_Time']
+#df3['Date'].apply(pd.Timestamp.date())
+
+
+# Timestamp.to_pydatetime()¶
+#df3['Date'] = df3['Date_Time'].apply(pd.Timestamp.to_pydatetime())
+df3['Date'] = pd.to_datetime(df3['Date_Time']).dt.floor('d')
+#df3['Date'].apply(df3['Date'].strftime('%Y-%m-%d 00:00:00'))
+#df3['Date'].apply(pd.to_datetime(int))
+
+
+print(df3)
+#df3['Date'] = df3['Date_Time'].dt.date
+
+
+Field_OBS = pd.read_sql_query('select G_ID, Date_Time, Stage_Feet, Measurement_Number from tblFieldVisitInfo WHERE G_ID = '+str(G_ID_Lookup)+';',conn)
+
+
+Field_OBS['Date_Time'] = Field_OBS['Date_Time'] - timedelta(hours=7)
+Field_OBS.dropna()
+
+#Field_OBS['Date'] = Field_OBS['Date_Time'].dt.date
+#Field_OBS['Date'] = df3['Date_Time'].apply(pd.Timestamp.to_pydatetime())
+Field_OBS['Date'] = pd.to_datetime(Field_OBS['Date_Time']).dt.floor('d')
+#Field_OBS['Date'].apply(Field_OBS['Date'].strftime('%Y-%m-%d 00:00:00'))
+#Field_OBS['Date'].apply(pd.to_datetime(int))
+
+#df['start_date_time'].dt.strftime('%Y-%m-%d %H:%M'))
+#Field_OBS['Date'].apply(pd.Timestamp.date())
+
+print('field obs')
+print(Field_OBS)
+
+#matches = fpd.fuzzy_merge(Output_Matches, Field_OBS,
+                          #left_on=['Date_Time'],
+                          #right_on=['Date_Time_Short'],
+                          #ignore_case=True,
+                          #keep='match')
+    
+#matches = pd.merge_asof(df3, Field_OBS,
+
+                     # on='Date_Time',
+                      #by='Date_Time',
+                      #tolerance=pd.Timedelta('2d'))
+
+
+matches = pd.merge_asof(df3, Field_OBS[['Date', 'Measurement_Number', 'Stage_Feet']].sort_values('Date'),
+                 on=['Date'], tolerance=pd.Timedelta('1h'))
+
+matches.dropna(subset = ["Stage_Feet"], inplace=True)
+
+
+
+#matches = pd.merge_asof(Field_OBS, df3[['Date_Time', 'WL FEET']],
+                 #on=['Date_Time'], tolerance=pd.Timedelta('1d'))
+
+
+print('matches')
+print(matches)
+matches.to_csv(r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\matches.csv")
+
+First_OBS = matches.iloc[0,9]
+Last_OBS = matches.iloc[-1,9]
+print('First OBS')
+print(First_OBS)
+print('last_OBS')
+print(Last_OBS)
+
+'''
+print('Field OBS')
+print(Field_OBS)
+Start_OBS = Field_OBS.loc[Field_OBS['Date_Time'] == output.iloc[0,0]]
+print('Start OBS')
+print(Start_OBS)
+End_OBS = Field_OBS.loc[Field_OBS['Date_Time'] == output.iloc[0,-1]]
+print('End OBS')
+print(End_OBS)
+'''
+
+###### GUI EDITOR##############################################################
+
+
+class GetEntry():
+
+    def __init__(self, master):
+
+
+        self.master=master
+        self.master.title('Input Dialog Box')
+        self.entry_contents=None
+        
+        # labels
+       # ttk.Label(text='First Point').grid(row=0, column=0)
+        #ttk.Label(text='Second Point').grid(row=1, column=0)
+        #
+
+
+
+        
+
+
+        ## Set point entries
+
+        # First A point
+        self.point1A = ttk.Entry(master)
+        self.point1A.grid(row=1, column=1)
+        self.point1A.focus_set()
+        self.point1A.insert(0, output.iloc[0,0])
+        
+         # First point B
+        self.point1B = ttk.Entry(master)
+        self.point1B.grid(row=1, column=2)
+        self.point1B.focus_set()
+        self.point1B.insert(0, output.iloc[0,1])
+        
+         # First point C
+        self.point1C = ttk.Entry(master)
+        self.point1C.grid(row=1, column=3)
+        self.point1C.focus_set()
+        self.point1C.insert(0, str(First_OBS))
+        
+        # Second point A
+        self.point2A = ttk.Entry(master)
+        self.point2A.grid(row=2, column=1)
+        self.point2A.focus_set()
+        self.point2A.insert(0, output.iloc[1,0])
+        
+          # Second point B
+        self.point2B = ttk.Entry(master)
+        self.point2B.grid(row=2, column=2)
+        self.point2B.focus_set()
+        self.point2B.insert(0, output.iloc[1,1])
+        
+        # third A point
+        self.point3A = ttk.Entry(master)
+        self.point3A.grid(row=3, column=1)
+        self.point3A.focus_set()
+        self.point3A.insert(0, output.iloc[2,0])
+        
+         # third point B
+        self.point3B = ttk.Entry(master)
+        self.point3B.grid(row=3, column=2)
+        self.point3B.focus_set()
+        self.point3B.insert(0, output.iloc[2,1])
+        
+        # forth point A
+        self.point4A = ttk.Entry(master)
+        self.point4A.grid(row=4, column=1)
+        self.point4A.focus_set()
+        self.point4A.insert(0, output.iloc[-3,0])
+        
+          # forth point B
+        self.point4B = ttk.Entry(master)
+        self.point4B.grid(row=4, column=2)
+        self.point4B.focus_set()
+        self.point4B.insert(0, output.iloc[-3,1])
+        
+          # fifth A point
+        self.point5A = ttk.Entry(master)
+        self.point5A.grid(row=5, column=1)
+        self.point5A.focus_set()
+        self.point5A.insert(0, output.iloc[-2,0])
+        
+         # fifth point B
+        self.point5B = ttk.Entry(master)
+        self.point5B.grid(row=5, column=2)
+        self.point5B.focus_set()
+        self.point5B.insert(0, output.iloc[-2,1])
+        
+        # sixth point A
+        self.point6A = ttk.Entry(master)
+        self.point6A.grid(row=6, column=1)
+        self.point6A.focus_set()
+        self.point6A.insert(0, output.iloc[-1,0])
+        
+          # sixth point B
+        self.point6B = ttk.Entry(master)
+        self.point6B.grid(row=6, column=2)
+        self.point6B.focus_set()
+        self.point6B.insert(0, output.iloc[-1,1])
+        
+        self.point6C = ttk.Entry(master)
+        self.point6C.grid(row=6, column=3)
+        self.point6C.focus_set()
+        self.point6C.insert(0, str(Last_OBS))
+        
+        
+        
+        
+        ttk.Button(master, text="Done", width=10,command=self.callback).grid(row=7, column=3)
+        ttk.Button(master, text="Update", width=10,command=self.update).grid(row=7, column=2)
+     
+##### Stage Update ####
+    def update(self):
+        self.data1B = float(self.point1B.get())
+        self.data1C = float(self.point1C.get())
+        self.data6B = float(self.point6B.get())
+        self.data6C = float(self.point6C.get())
+        
+        self.INT_off = self.data1C - self.data1B
+        
+        self.INT = ttk.Label(master, text=str(self.INT_off))
+        self.INT.grid(row=1, column = 4)
+        
+        self.FIN_off = self.data6C - self.data6B
+        
+        self.FIN = ttk.Label(master, text=str(self.FIN_off))
+        self.FIN.grid(row=6, column = 4)
+        
+        self.Shift = self.FIN_off - self.INT_off
+        
+        
+        #textExample.delete(1.0,"end")
+    #textExample.insert(1.0, text)
+        #self.W.delete(1.0,"end")
+        #self.W.entry.delete(0,'end')
+        #self.W.text.set("                                                                        ")
+        #self.W = ttk.delete(0, 'end')
+        self.W = ttk.Label(master, text=str(self.Shift))
+        self.W.grid(row=6, column=5)
+        
+        
+        
+
+    def callback(self):
+        """ get the contents of the Entries and exit the prompt"""
+        self.entry_contents=[self.point1A.get(),self.point1B.get(),self.point1C.get(),self.point2B.get(),self.point3B.get(),self.point4B.get(),self.point5B.get(),self.point6B.get(),self.point6C.get()]
+        self.master.destroy()
+        self.master.quit()
+
+master = tk.Tk()
+GetPoints=GetEntry(master)
+master.mainloop()
+
+
+Points=GetPoints.entry_contents
+
+P1A=Points[0]
+P1B=Points[1]
+#P2A=Points[2]
+P1C=Points[2]
+#P1C = P1C.astype(float)
+P2B=Points[3]
+P3B=Points[4]
+P4B=Points[5]
+P5B=Points[6]
+P6B=Points[7]
+P6C=Points[8]
+#P6C = P6C.astype(float)
+
+print(Points)
+print(P1A,P1B)
+print("begin Staff")
+print(P1C)
+print("end Staff")
+print(P6C)
+
+output.iloc[0,1] = P1B
+#output.iloc[0,2] = P1C
+output.iloc[1,1] = P2B
+output.iloc[2,1] = P3B
+output.iloc[-3,1] = P4B
+output.iloc[-2,1] = P5B
+output.iloc[-1,1] = P6B
+#output.iloc[-1,2] = P6C
+
+
+Staff_Offset_1 = float(P1C)-float(P1B)
+Staff_Offset_1_Round=round(Staff_Offset_1,2)
+
+Staff_Offset_2 = float(P6C)-float(P6B)
+Staff_Offset_2_Round=round(Staff_Offset_2,2)
+
+Staff_Change = float(Staff_Offset_2)-float(Staff_Offset_1)
+
+Staff_Change_Round=round(Staff_Change,2 )
+
+
+
+print("Staff Offset 1")
+print(Staff_Offset_1_Round)
+print("Staff Offset 2")
+print(Staff_Offset_2_Round)
+
+
+
+
+####### END GUI EDITOR #######################################################
+
+#rows = output['WL Feet']
+
+output['WL FEET'] = output['WL FEET'].astype(float)
+#output['Stage'] = output['WL FEET']+float(Staff_Offset_1_Round)
+
+############## CALCULATE STAFF ################################################
+
+
+output['Stage']=""
+output = output[['Date_Time_String','WL FEET','Stage','Temp']]
+output.iloc[0,2]=float(Staff_Offset_1)
+output.iloc[-1,2]=float(Staff_Offset_2)
+#output['interpolate']=output['Stage'].interpolate(method='linear', limit=None, inplace=True, limit_direction='forward', limit_area=None)
+
+
+
+rows = output['WL FEET'].shape
+print('row count')
+print(rows[0])
+# Define the known points
+Staff_x = [1, rows[0]]
+
+
+print ('X for staff')
+print(Staff_x)
+Staff_y = [output.iloc[0,2], output.iloc[-1,2]]
+print('Y for staff')
+print(Staff_y)
+
+# Calculate the coefficients. This line answers the initial question. 
+coefficients = np.polyfit(Staff_x,Staff_y, 1)
+
+# Print the findings
+print('a = ')
+print(coefficients[0])
+print( 'b = ')
+print(coefficients[1])
+
+# Let's compute the values of the line...
+polynomial = np.poly1d(coefficients)
+print('polynomial')
+print(polynomial)
+
+output['Stage'] = (((coefficients[0]*output.index)+coefficients[1]))+output['WL FEET']
+
+
+################# END STAFF Calculator ########################################
+
+################# DISCHARGE ###################################################
+def Discharge ():
+    First_QM = matches.iloc[0,8]
+    Last_QM = matches.iloc[-1,8]
+    PARAMETER_OBS = pd.read_sql_query('select G_ID, AutoDTStamp, Parameter, Parameter_Value from tblFieldData WHERE G_ID = '+str(G_ID_Lookup)+';',conn)
+    #FLOW_OBS = PARAMETER_OBS['Parameter'] = '2'
+    FLOW_OBS = PARAMETER_OBS[PARAMETER_OBS['Parameter'] == 2].copy()
+    FLOW_OBS['Date'] = FLOW_OBS['AutoDTStamp'] - timedelta(hours=7)
+    FLOW_OBS.dropna()
+    FLOW_OBS['Date'] = pd.to_datetime(FLOW_OBS['Date']).dt.floor('d')
+    print('FLOW_OBS')
+    print(FLOW_OBS)
+
+    FLOW_MATCHES = pd.merge_asof(matches, FLOW_OBS[['Date', 'Parameter', 'Parameter_Value']].sort_values('Date'), on=['Date'], tolerance=pd.Timedelta('1h'))
+    #FLOW_MATCHES = pd.merge_asof(FLOW_OBS, matches[['Date_Time, Date, WL_FEET, Stage_Feet']].sort_values('Date'), on=['Date'], tolerance=pd.Timedelta('1h'))
+    global First_Q
+    FIRST_Q = FLOW_MATCHES.iloc[0,11]
+    global Last_Q
+    LAST_Q = FLOW_MATCHES.iloc[-1,11]
+    global FIRST_Q_NUMBER
+    FIRST_Q_NUMBER = FLOW_MATCHES.iloc[0,8]
+    global LAST_Q_NUMBER
+    LAST_Q_NUMBER = FLOW_MATCHES.iloc[-1,8]
+
+    
+    print('FLOW_MATCHES')
+    print(FLOW_MATCHES)
+    print ("DISCHARGE")
+    print(First_QM)
+    print(Last_QM)
+    print('First Measure')
+    print(FIRST_Q)
+    print('Last Measure')
+    print(LAST_Q)
+    print('FIRST Q')
+    print(FIRST_Q_NUMBER)
+    print('Last Q')
+    print(LAST_Q_NUMBER)
+    
+    global FIRST_MEASURE_INFO
+    FIRST_MEASURE_INFO = 'Measurement: '+str(First_QM)
+    global LAST_MEASURE_INFO 
+    LAST_MEASURE_INFO = 'Measurement: '+str(Last_QM)
+    global FIRST_QM
+    FIRST_QM = 'QM: '+str(FIRST_Q)
+    global LAST_QM
+    LAST_QM = 'QM: '+str(LAST_Q)
+    global FIRST_QR 
+    FIRST_QR = 'QR: '
+    global LAST_QR
+    LAST_QR = 'QR: '
+    
+def Stage_Only():
+    global FIRST_MEASURE_INFO
+    FIRST_MEASURE_INFO= str(" ")
+    global LAST_MEASURE_INFO 
+    LAST_MEASURE_INFO = str(" ")
+    global FIRST_Q 
+    FIRST_Q = str(" ")
+    global LAST_Q 
+    LAST_Q= str(" ")
+    global FIRST_QM 
+    FIRST_QM = str(" ")
+    global LAST_QM 
+    LAST_QM = str(" ")
+    global FIRST_QR 
+    FIRST_QR = str(" ")
+    global LAST_QR 
+    LAST_QR = str(" ")
+    
+if  G_Type == 'Stream Gauge(Recording)':
+    Discharge()
+else:
+    Stage_Only() 
+    
+
+###################### END DISCHARGE ##########################################
+print('output')
+print(output)
+
+
+
+output_filename = my_title+"_"+tail_file
+
+
+output_head = output.head(1)
+output_tail = output.tail(1)
+
+output_head.reset_index(inplace=True)
+output_head_clip=pd.DataFrame.to_string(output_head, buf=None, columns=['Date_Time_String'], index=None, header=None)
+
+
+print('output head')
+print(output_head)
+
+print('output head clip')
+print(output_head_clip)
+output_head_format = pd.to_datetime(output_head_clip)
+output_head_year = output_head_format.strftime('%Y')
+output_head_month = output_head_format.strftime('%m')
+output_head_day = output_head_format.strftime('%d')
+output_head_hour = output_head_format.strftime('%H')
+output_head_minute = output_head_format.strftime('%M')
+
+start_datetime = output_head_day+"/"+output_head_month+"/"+output_head_year+" "+output_head_hour+":"+output_head_minute
+print('output head year')
+print(output_head_year)
+
+output_tail.reset_index(inplace=True)
+output_tail_clip=pd.DataFrame.to_string(output_tail, buf=None, columns=['Date_Time_String'], index=None, header=None)
+
+output_tail_format = pd.to_datetime(output_tail_clip)
+output_tail_year = output_tail_format.strftime('%Y')
+output_tail_month = output_tail_format.strftime('%m')
+output_tail_day = output_tail_format.strftime('%d')
+output_tail_hour = output_tail_format.strftime('%H')
+output_tail_minute = output_tail_format.strftime('%M')
+
+end_datetime = output_tail_day+"/"+output_tail_month+"/"+output_tail_year+" "+output_tail_hour+":"+output_tail_minute
+
+print('tail year')
+print(output_tail_year)
+
+
+outputhead = output.head(1)
+outputtail = output.tail(1)
+
+output["WL FEET"] = output["WL FEET"].astype(str)
+output['WL FEET'].astype(float)
+print('WL FEET TO STRING')
+print(output)
+
+#print('output reset index')
+#print(output)
+
+#pd.to_string(output['WL FEET'], inplace=True)
+#print('output string')
+
+#not the double backslah
+
+
+output["Date_Time_String"] = output["Date_Time_String"].astype(str)
+output.set_index('Date_Time_String', inplace=True)
+output.to_csv(r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\\"+output_filename+".csv")
+
+
+stage_output = output[['Stage']].copy()
+stage_output.to_csv(r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\\"+output_filename+"_APP.csv")
+df3.to_csv(r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\\df3.csv")
+df2_5min.to_csv(r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\\baro.csv")
+output.reset_index(inplace=True)
+
+
+print('file saved')
+
+head_value=outputhead['WL FEET'].values[0]
+head_value_string=str(head_value)
+
+print('water level value start')
+
+
+tail_value=outputtail['WL FEET'].values[0]
+tail_value_string=str(tail_value)
+
+print('water leel value end')
+
+#output.reset_index(inplace=True)
+
+
+#print('index reset')
+
+
+
+output['Date_Time_String'] =  pd.to_datetime(output['Date_Time_String'])
+output['WL FEET'].astype(float)
+
+print('to datetime')
+print(output)
+
+print(output.dtypes)
+
+#output.set_index('Date_Time_String', inplace=True)
+
+
+#print('date time index')
+#print(output)
+'''
+x1 = output['Date_Time_String']
+y1 = output['WL FEET']
+y2 = output['Staff']
+y1.astype(float)
+
+'''
+#print('plot one defined')
+#print('x1')
+#print(x1)
+#x1.to_csv(r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\\x1.csv")
+#print('y1')
+#print(y1)
+#y1.to_csv(r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\\y2.csv")
+
+'''
+
+x2 = outputhead['Date_Time_String']
+y2 = outputhead['WL FEET']
+
+x3 = outputtail['Date_Time_String']
+y3 = outputtail['WL FEET']
+'''
+#####tkinter loop its hella slow though
+
+
+#plt.plot(x1, y1)
+#print('x1')
+#print(x1.dtypes)
+#print('y2')
+#print(y1.dtypes)
+
+
+
+#plt.title(my_title+' WL FEET '+head_graph+' - '+tail_graph)
+#print('plt title')
+#plt.ylabel('Water Level Feet')
+#print('ylabel')
+
+#plt.annotate('First Log: '+start_datetime, (0,0), (0, -20), xycoords='axes fraction', textcoords='offset points', va='top')
+#plt.annotate('Staff: ', (0,0), (0, -30), xycoords='axes fraction', textcoords='offset points', va='top')
+#plt.annotate('Instrument: '+head_value_string, (0,0), (0, -40), xycoords='axes fraction', textcoords='offset points', va='top')
+
+#plt.annotate('Last Log: '+end_datetime, (0,0), (450, -20), xycoords='axes fraction', textcoords='offset points', va='top')
+#plt.annotate('Staff: ', (0,0), (450, -30), xycoords='axes fraction', textcoords='offset points', va='top')
+#plt.annotate('Instrument: '+tail_value_string, (0,0), (450, -40), xycoords='axes fraction', textcoords='offset points', va='top')
+
+print('annotation complete')
+#plt.show()
+###### for axis origon at zero use ---  yaxis_rangemode ='tozero'
+layout1 = go.Layout(width=1010, height=750, yaxis_title='Water Level Feet', plot_bgcolor='rgba(0,0,0,0)', 
+                    margin_b=100, #increase the bottom margin to have space for caption
+                    annotations = [dict(xref='paper', yref='paper', x=0, y=-0.09, showarrow=False, text ='First Log: '+start_datetime), 
+                                   dict(xref='paper', yref='paper', x=0, y=-0.11, showarrow=False, text ='Staff: '+str(P1C)),
+                                   dict(xref='paper', yref='paper', x=0, y=-0.13, showarrow=False, text ='Instrument: '+str(P1B)),
+                                   dict(xref='paper', yref='paper', x=0, y=-0.15, showarrow=False, text = 'Initial Offset '+str(Staff_Offset_1_Round)),
+                                   dict(xref='paper', yref='paper', x=1, y=-0.09, showarrow=False, text ='Last Log: '+end_datetime),
+                                   dict(xref='paper', yref='paper', x=1, y=-0.11, showarrow=False, text ='Staff: '+str(P6C)),
+                                   dict(xref='paper', yref='paper', x=1, y=-0.13, showarrow=False, text ='Instrument: '+str(P6B)),
+                                   dict(xref='paper', yref='paper', x=1, y=-0.15, showarrow=False, text = 'Final Offset '+str(Staff_Offset_2_Round)),
+                                   dict(xref='paper', yref='paper', x=0.5, y=1.1, showarrow=False, text = my_title+' WL FEET '+head_graph+' - '+tail_graph),
+                                   dict(xref='paper', yref='paper', x=0.5, y=-0.15, showarrow=False, text = 'Staff Change '+str(Staff_Change_Round)),
+                                   dict(xref='paper', yref='paper', x=0, y=1.07, showarrow=False, text = FIRST_MEASURE_INFO),
+                                   dict(xref='paper', yref='paper', x=1, y=1.07, showarrow=False, text = LAST_MEASURE_INFO),
+                                   dict(xref='paper', yref='paper', x=0, y=1.04, showarrow=False, text = FIRST_QM),
+                                   dict(xref='paper', yref='paper', x=1, y=1.04, showarrow=False, text = LAST_QM),
+                                   dict(xref='paper', yref='paper', x=0, y=1.01, showarrow=False, text = FIRST_QR),
+                                   dict(xref='paper', yref='paper', x=1, y=1.01, showarrow=False, text = FIRST_QR)])
+    #FIRST_MEASURE_INFO = ' '
+    #LAST_MEASURE_INFO = ' '
+    #FIRST_Q = ' '
+    #LAST_Q = ' ' 
+    #FIRST_QM = ' '
+    #LAST_QM 
+                  
+
+
+
+
+fig = go.Figure(layout=layout1)
+#fig.add_trace(go.Scatter(
+                #x=output['Date_Time_String'],
+                #y=output['WL FEET'],
+                #line_color='grey',
+                #opacity=0.8,
+               # name="WL FEET"  ))
+fig.add_trace(go.Scatter(
+                x=output['Date_Time_String'],
+                y=output['Stage'],
+                line_color='black',
+                opacity=0.5,
+                name="Stage"  ))
+
+
+fig.update_xaxes(showline=True, linewidth=.5, linecolor='black', mirror=True)
+fig.update_yaxes(showline=True, linewidth=.5, linecolor='black', mirror=True)
+
+
+fig.show()
+
+#plot_pdf = fig.figure(figsize=(11,8.5))
+
+#plot_pdf.expofig("W:\STS\hydro\GAUGE\Temp\Ian's Temp\\"+output_filename+".pdf", dpi=None, facecolor='w', edgecolor='w',
+       # orientation='portrait', papertype=None, format='pdf',
+       # transparent=False, bbox_inches=None, pad_inches=None, metadata=None)
+
+
+fig.write_image("W:\STS\hydro\GAUGE\Temp\Ian's Temp\\"+output_filename+".pdf")
+
+
+print('pdf saved')
+
+#############opens file#####
+webbrowser.open_new("W:\STS\hydro\GAUGE\Temp\Ian's Temp\\"+output_filename+".pdf")
