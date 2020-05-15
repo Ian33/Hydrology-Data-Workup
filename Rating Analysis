@@ -1,0 +1,114 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu May 14 15:53:33 2020
+
+@author: IHiggins
+"""
+
+# -*- coding: utf-8 -*-
+"""
+Created on Thu May  7 14:45:37 2020
+
+@author: IHiggins
+"""
+
+import webbrowser
+import os
+from datetime import date
+import tkinter
+import fuzzy_pandas as fpd
+import tkinter as tk
+from tkinter import ttk
+import tkinter as tk
+from tkinter import ttk
+import matplotlib.pyplot as plt
+from subprocess import call
+import numpy as np
+import matplotlib.pyplot as plt
+import pyodbc
+from scipy import stats
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
+import pandas as pd
+from matplotlib import pyplot as plt
+import plotly.figure_factory as ff
+from tkinter import *
+from tkinter.ttk import *
+import matplotlib
+from matplotlib.backend_bases import key_press_handler
+from matplotlib.figure import Figure
+import numpy as np
+import plotly.io as pio #plotly renderer
+pio.renderers.default = "browser"
+import plotly.graph_objects as go
+import tkinter as tk
+from tkinter import simpledialog
+from tkinter import *   ## notice lowercase 't' in tkinter here
+from tkinter import filedialog
+import pandas as pd
+from datetime import datetime
+from datetime import timedelta
+import subprocess, sys
+
+conn = pyodbc.connect('Driver={SQL Server};'
+                      'Server=XXXX;'
+                      'Database=gData;'
+                      'Trusted_Connection=yes;')
+########################## 58A ######################
+Site = 1188
+
+
+DF1 = pd.read_sql_query('select G_ID, RatingNumber, WaterLevel, Discharge from tblFlowRatings WHERE G_ID = '+str(Site)+';',conn)
+DF1 = DF1[DF1['RatingNumber'] == '25i_08']
+
+DF1_PARAMETER_OBS = pd.read_sql_query('select G_ID, FieldVisit_ID, AutoDTStamp, Parameter, Parameter_Value from tblFieldData WHERE G_ID = '+str(Site)+';',conn)
+DF1_Site_Q = DF1_PARAMETER_OBS[DF1_PARAMETER_OBS['Parameter'] == 2].copy()
+DF1_Field_OBS = pd.read_sql_query('select Stage_Feet, Measurement_Number, FieldVisit_ID from tblFieldVisitInfo WHERE G_ID = '+str(Site)+';',conn)
+DF1_FLOW_MATCHES = pd.merge(DF1_Field_OBS, DF1_Site_Q[['FieldVisit_ID', 'Parameter_Value']], on='FieldVisit_ID')
+
+
+
+DF1_FLOW_MATCHES['opacity']=DF1_FLOW_MATCHES.index/DF1_FLOW_MATCHES.index[-1]
+
+
+
+layout1 = go.Layout(width=1010, height=750, yaxis_title='Water Level', plot_bgcolor='rgba(0,0,0,0)')
+
+fig = go.Figure(layout=layout1)
+
+fig.add_trace(go.Scatter(
+                x=DF1['Discharge'],
+                #x=DF58A['WaterLevel']+.3,
+                y=DF1['WaterLevel'],
+                line_color='Blue',
+                opacity=0.5,
+                name="58A"))
+
+fig.add_trace(go.Scatter(
+                x=DF1_FLOW_MATCHES['Parameter_Value'],
+               # x=DF58F['WaterLevel']+.6,
+                y=DF1_FLOW_MATCHES['Stage_Feet']-1.2,
+                mode='markers',
+               marker=dict(
+                        color='Blue',
+                        size=5,
+                        opacity=DF1_FLOW_MATCHES['opacity']),
+                text=DF1_FLOW_MATCHES['Measurement_Number'],
+                name="Site",  ))
+
+
+
+
+
+fig.update_xaxes(showline=True, linewidth=.5, linecolor='black', mirror=True)
+fig.update_yaxes(showline=True, linewidth=.5, linecolor='black', mirror=True)
+
+#fig.update_xaxes(showgrid=False)
+#fig.update_yaxes(showgrid=False)
+
+fig.update_layout(xaxis_type="log", yaxis_type="log")
+fig.update_xaxes(ticks="outside")
+fig.update_yaxes(ticks="outside")
+
+
+fig.show()
