@@ -1,0 +1,766 @@
+import webbrowser
+import os
+from datetime import date
+import tkinter
+import fuzzy_pandas as fpd
+import tkinter as tk
+from tkinter import ttk
+import tkinter as tk
+from tkinter import ttk
+import matplotlib.pyplot as plt
+from subprocess import call
+import numpy as np
+import matplotlib.pyplot as plt
+
+import pyodbc
+from scipy import stats
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
+
+import pandas as pd
+
+from matplotlib import pyplot as plt
+import plotly.figure_factory as ff
+
+from tkinter import *
+from tkinter.ttk import *
+
+import matplotlib
+
+
+#from matplotlib.backends.backend_tkagg import (
+   # FigureCanvasTkAgg, NavigationToolbar2Tk)
+# Implement the default Matplotlib key bindings.
+from matplotlib.backend_bases import key_press_handler
+from matplotlib.figure import Figure
+
+import numpy as np
+#matplotlib.use("TkAgg")
+#from matplotlib.figure import Figure
+#from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+'''
+x = [1, 2, 3]
+y = [1, 4, 9]
+z = [10, 5, 0]
+plt.plot (x, z)
+plt.plot(x, y)
+plt.show()
+'''
+
+import plotly.io as pio #plotly renderer
+pio.renderers.default = "browser"
+
+import plotly.graph_objects as go
+
+
+
+import tkinter as tk
+from tkinter import simpledialog
+
+
+
+from tkinter import *   ## notice lowercase 't' in tkinter here
+from tkinter import filedialog
+import pandas as pd
+from datetime import datetime
+from datetime import timedelta
+
+import subprocess, sys
+
+######################IMPORT FILE #############################################
+Tk().withdraw()
+filename = filedialog.askopenfilename(initialdir = "W:\STS\hydro\GAUGE\Temp\Ian's Temp", title="Select original line file:", filetypes = (("CSV files","*.csv"),("all files","*.*"))) # show an "Open" dialog box and return the path to the selected file
+
+df1 = pd.read_csv(filename, usecols=[0,1,2,3])
+
+######################## GETS TITLE ###########################################
+raw_title = pd.read_csv(filename, nrows=1, usecols=[1])
+
+
+ROOT = tk.Tk()
+
+ROOT.withdraw()
+
+File_Type = df1.iloc[0,0]
+
+
+Site = simpledialog.askstring(title="Test",
+                                  prompt=raw_title)
+
+############# GET META DATA FROM APP ############################################
+conn = pyodbc.connect('Driver={SQL Server};'
+                      'Server=XXXXX;'
+                      'Database=gData;'
+                      'Trusted_Connection=yes;')
+
+
+Gage_Lookup = pd.read_sql_query('select G_ID, SITE_CODE, SITE_NAME, GAGETAG from tblGaugeLLID;',conn)
+Gage_Lookup.reset_index()
+
+Gage_Lookup['G_ID_STR'] = Gage_Lookup['G_ID'].apply(str)
+
+search = Gage_Lookup.loc[Gage_Lookup['SITE_CODE'].isin([Site])]
+
+G_ID_Lookup = search.iloc[0,0]
+G_Type = search.iloc[0,3]
+
+####### GET FIELD OBSERVATIONS ################################################
+df1.rename(columns={'Date': 'Date_Time'}, inplace = True)
+
+df1['Date_Time'] = pd.to_datetime(df1['Date_Time'])
+df1['Date'] = pd.to_datetime(df1['Date_Time']).dt.floor('d')
+
+conn = pyodbc.connect('Driver={SQL Server};'
+                      'Server=NRDOSQLPrX01;'
+                      'Database=gData;'
+                      'Trusted_Connection=yes;')
+
+
+#FLOW_OBS = pd.read_sql_query('select G_ID, FieldVisit_ID, Parameter, Parameter_Value from tblFieldData WHERE G_ID = '+str(G_ID_Lookup)+';',conn)
+#FLOW_OBS = PARAMETER_OBS['Parameter'] = '2'
+#FLOW_OBS = PARAMETER_OBS[PARAMETER_OBS['Parameter'] == 2].copy()
+
+
+
+Field_OBS = pd.read_sql_query('select G_ID, Date_Time, Stage_Feet, Measurement_Number, FieldVisit_ID from tblFieldVisitInfo WHERE G_ID = '+str(G_ID_Lookup)+';',conn)
+
+
+Field_OBS['Date_Time'] = Field_OBS['Date_Time'] - timedelta(hours=7)
+Field_OBS.dropna()
+
+Field_OBS['Date'] = pd.to_datetime(Field_OBS['Date_Time']).dt.floor('d')
+
+
+
+
+matches = pd.merge_asof(df1, Field_OBS[['Date', 'Measurement_Number', 'Stage_Feet', 'FieldVisit_ID']].sort_values('Date'),
+                 on=['Date'], tolerance=pd.Timedelta('1h'))
+
+matches.dropna(subset = ["Stage_Feet"], inplace=True)
+##
+
+First_OBS = matches.iloc[0,6]
+Last_OBS = matches.iloc[-1,6]
+
+
+######################### Correct Stage #######################################
+
+df1['Staff_Corrected']=""
+###### GUI EDITOR##############################################################
+
+
+class GetEntry():
+
+    def __init__(self, master):
+
+
+        self.master=master
+        self.master.title('Input Dialog Box')
+        self.entry_contents=None
+
+        ## Set point entries
+
+        # First A point
+        self.point1A = ttk.Entry(master)
+        self.point1A.grid(row=1, column=1)
+        self.point1A.focus_set()
+        self.point1A.insert(0, df1.iloc[0,0])
+        
+         # First point B
+        self.point1B = ttk.Entry(master)
+        self.point1B.grid(row=1, column=2)
+        self.point1B.focus_set()
+        self.point1B.insert(0, df1.iloc[0,1])
+        
+         # First point C
+        self.point1C = ttk.Entry(master)
+        self.point1C.grid(row=1, column=3)
+        self.point1C.focus_set()
+        self.point1C.insert(0, str(First_OBS))
+        
+        # Second point A
+        self.point2A = ttk.Entry(master)
+        self.point2A.grid(row=2, column=1)
+        self.point2A.focus_set()
+        self.point2A.insert(0, df1.iloc[1,0])
+        
+          # Second point B
+        self.point2B = ttk.Entry(master)
+        self.point2B.grid(row=2, column=2)
+        self.point2B.focus_set()
+        self.point2B.insert(0, df1.iloc[1,1])
+        
+        # third A point
+        self.point3A = ttk.Entry(master)
+        self.point3A.grid(row=3, column=1)
+        self.point3A.focus_set()
+        self.point3A.insert(0, df1.iloc[2,0])
+        
+         # third point B
+        self.point3B = ttk.Entry(master)
+        self.point3B.grid(row=3, column=2)
+        self.point3B.focus_set()
+        self.point3B.insert(0, df1.iloc[2,1])
+        
+        # forth point A
+        self.point4A = ttk.Entry(master)
+        self.point4A.grid(row=4, column=1)
+        self.point4A.focus_set()
+        self.point4A.insert(0, df1.iloc[-3,0])
+        
+          # forth point B
+        self.point4B = ttk.Entry(master)
+        self.point4B.grid(row=4, column=2)
+        self.point4B.focus_set()
+        self.point4B.insert(0, df1.iloc[-3,1])
+        
+          # fifth A point
+        self.point5A = ttk.Entry(master)
+        self.point5A.grid(row=5, column=1)
+        self.point5A.focus_set()
+        self.point5A.insert(0, df1.iloc[-2,0])
+        
+         # fifth point B
+        self.point5B = ttk.Entry(master)
+        self.point5B.grid(row=5, column=2)
+        self.point5B.focus_set()
+        self.point5B.insert(0, df1.iloc[-2,1])
+        
+        # sixth point A
+        self.point6A = ttk.Entry(master)
+        self.point6A.grid(row=6, column=1)
+        self.point6A.focus_set()
+        self.point6A.insert(0, df1.iloc[-1,0])
+        
+          # sixth point B
+        self.point6B = ttk.Entry(master)
+        self.point6B.grid(row=6, column=2)
+        self.point6B.focus_set()
+        self.point6B.insert(0, df1.iloc[-1,1])
+        
+        self.point6C = ttk.Entry(master)
+        self.point6C.grid(row=6, column=3)
+        self.point6C.focus_set()
+        self.point6C.insert(0, str(Last_OBS))
+        
+        
+        
+        
+        ttk.Button(master, text="Done", width=10,command=self.callback).grid(row=7, column=3)
+        ttk.Button(master, text="Update", width=10,command=self.update).grid(row=7, column=2)
+        
+     
+##### Stage Update ####
+    def update(self):
+        self.data1B = float(self.point1B.get())
+        self.data1C = float(self.point1C.get())
+        self.data6B = float(self.point6B.get())
+        self.data6C = float(self.point6C.get())
+        
+        self.INT_off = self.data1C - self.data1B
+        
+        self.INT = ttk.Label(master, text=str(self.INT_off))
+        self.INT.grid(row=1, column = 4)
+        
+        self.FIN_off = self.data6C - self.data6B
+        
+        self.FIN = ttk.Label(master, text=str(self.FIN_off))
+        self.FIN.grid(row=6, column = 4)
+        
+        self.Shift = self.FIN_off - self.INT_off
+        
+
+        self.W = ttk.Label(master, text=str(self.Shift))
+        self.W.grid(row=6, column=5)
+
+    def callback(self):
+        """ get the contents of the Entries and exit the prompt"""
+        self.entry_contents=[self.point1A.get(),self.point1B.get(),self.point1C.get(),self.point2B.get(),self.point3B.get(),self.point4B.get(),self.point5B.get(),self.point6B.get(),self.point6C.get()]
+        self.master.destroy()
+        self.master.quit()
+
+master = tk.Tk()
+GetPoints=GetEntry(master)
+master.mainloop()
+
+
+Points=GetPoints.entry_contents
+
+P1A=Points[0]
+P1B=Points[1]
+#P2A=Points[2]
+P1C=Points[2]
+P2B=Points[3]
+P3B=Points[4]
+P4B=Points[5]
+P5B=Points[6]
+P6B=Points[7]
+P6C=Points[8]
+
+
+df1.iloc[0,1] = P1B
+#output.iloc[0,2] = P1C
+df1.iloc[1,1] = P2B
+df1.iloc[2,1] = P3B
+df1.iloc[-3,1] = P4B
+df1.iloc[-2,1] = P5B
+df1.iloc[-1,1] = P6B
+#output.iloc[-1,2] = P6C
+
+
+Staff_Offset_1 = float(P1C)-float(P1B)
+Staff_Offset_1_Round=round(Staff_Offset_1,2)
+
+Staff_Offset_2 = float(P6C)-float(P6B)
+Staff_Offset_2_Round=round(Staff_Offset_2,2)
+
+Staff_Change = float(Staff_Offset_2)-float(Staff_Offset_1)
+
+Staff_Change_Round=round(Staff_Change,2 )
+
+
+####### END GUI EDITOR #######################################################
+
+#rows = output['WL Feet']
+
+df1['Staff_ft'] = df1['Staff_ft'].astype(float)
+df1['Instrument'] = df1['Instrument'].astype(float)
+#output['Stage'] = output['WL FEET']+float(Staff_Offset_1_Round)'
+
+
+############## CALCULATE STAFF ################################################
+df1.iloc[0,5]=float(Staff_Offset_1)
+df1.iloc[-1,5]=float(Staff_Offset_2)
+
+rows = df1['Instrument'].shape
+
+# Define the known points
+Staff_x = [1, rows[0]]
+Staff_y = [df1.iloc[0,5], df1.iloc[-1,5]]
+
+# Calculate the coefficients. This line answers the initial question. 
+coefficients = np.polyfit(Staff_x,Staff_y, 1)
+
+
+# Let's compute the values of the line...
+polynomial = np.poly1d(coefficients)
+
+
+df1['Staff_Corrected'] = (((coefficients[0]*df1.index)+coefficients[1]))+df1['Instrument']
+
+df1.to_csv(r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\df1.csv")
+
+
+################# END STAFF Calculator ########################################
+################# DISCHARGE ###################################################
+
+First_QM = matches.iloc[0,5]
+
+Last_QM = matches.iloc[-1,5]
+
+PARAMETER_OBS = pd.read_sql_query('select G_ID, FieldVisit_ID, Parameter, Parameter_Value from tblFieldData WHERE G_ID = '+str(G_ID_Lookup)+';',conn)
+#FLOW_OBS = PARAMETER_OBS['Parameter'] = '2'
+FLOW_OBS = PARAMETER_OBS[PARAMETER_OBS['Parameter'] == 2].copy()
+matches.dropna()
+
+
+
+
+matches["Measurement_Number"]= matches["Measurement_Number"].astype(float) 
+FLOW_OBS["FieldVisit_ID"]= FLOW_OBS["FieldVisit_ID"].astype(float) 
+
+
+
+#FLOW_MATCHES = pd.merge(matches.sort_values('FieldVisit_ID'), FLOW_OBS[['FieldVisit_ID', 'Parameter', 'Parameter_Value']].sort_values('FieldVisit_ID'), on='FieldVisit_ID')
+FLOW_MATCHES = pd.merge(matches, FLOW_OBS[['FieldVisit_ID', 'Parameter', 'Parameter_Value']], on='FieldVisit_ID')
+#FLOW_OBS.to_csv((r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\Flow_MATCHES_GRAPH.csv"))
+#Field_OBS.to_csv(r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\field_OBS_GRAPHS.csv")
+OBS = pd.merge(Field_OBS, FLOW_OBS[['FieldVisit_ID', 'Parameter', 'Parameter_Value']], on='FieldVisit_ID')
+OBS.to_csv(r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\Flow_MATCHES_Graph.csv")
+
+FLOW_MATCHES.dropna()
+#FLOW_MATCHES.to_csv(r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\Flow_MATCHES.csv")
+#FLOW_MATCHES = pd.merge_asof(FLOW_OBS, matches[['Date_Time, Date, WL_FEET, Stage_Feet']].sort_values('Date'), on=['Date'], tolerance=pd.Timedelta('1h'))
+global First_Q
+FIRST_Q = FLOW_MATCHES.iloc[0,9]
+global Last_Q
+LAST_Q = FLOW_MATCHES.iloc[-1,9]
+global FIRST_Q_NUMBER
+FIRST_Q_NUMBER = FLOW_MATCHES.iloc[0,5]
+global LAST_Q_NUMBER
+LAST_Q_NUMBER = FLOW_MATCHES.iloc[-1,5]
+
+
+global FIRST_MEASURE_INFO
+FIRST_MEASURE_INFO = 'Measurement: '+str(First_QM)
+global LAST_MEASURE_INFO 
+LAST_MEASURE_INFO = 'Measurement: '+str(Last_QM)
+global FIRST_QM
+FIRST_QM = 'QM: '+str(FIRST_Q)
+global LAST_QM
+LAST_QM = 'QM: '+str(LAST_Q)
+global FIRST_QR 
+FIRST_QR = 'QR: '
+global LAST_QR
+LAST_QR = 'QR: '
+    
+FLOW_MATCHES.to_csv(r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\flow_matches.csv")
+
+
+###################### END DISCHARGE ##########################################
+### Get Rating ###############################################################
+
+
+Ratings = pd.read_sql_query('select G_ID, RatingNumber, WaterLevel, Discharge, Marker, FlowRatings_id from tblFlowRatings WHERE G_ID = '+str(G_ID_Lookup)+';',conn)
+print(Ratings)
+Rating_Number = simpledialog.askstring(title="Enter Rating",
+                                  prompt=Ratings.iloc[-1,1])
+
+print(Rating_Number)
+
+Ratings_Selection = Ratings[Ratings['RatingNumber'] == Rating_Number]
+print(Ratings_Selection)
+Ratings_Selection.to_csv(r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\ratings_Selection.csv")
+Rating_ID = Ratings_Selection.iloc[-1,1]
+print(Rating_ID)
+
+Rating = Ratings_Selection.copy()
+
+Rating_Offsets = pd.read_sql_query('select FlowRating_ID, Rating_Number, Offset from tblFlowRating_Stats;',conn)
+print(Rating_Offsets)
+Rating_Offsets['Rating_Number'] = Rating_Offsets['Rating_Number'].str.rstrip()
+print(Rating_Offsets)
+Rating_Offset = Rating_Offsets[Rating_Offsets['Rating_Number'] == Rating_ID].iloc[0,2]
+print(Rating_Offset)
+
+########### Rating Offset ####################################################
+
+
+########### Stage for Rating ##################################################
+
+
+df1['WaterLevel'] = df1['Staff_Corrected'] - float(Rating_Offset)
+df1['WaterLevel'].astype(float)
+df1['WaterLevel'] = df1['WaterLevel'].round(2)
+Ratings_Selection['WaterLevel'].astype(float)
+
+print(df1)
+
+#df1.merge(Ratings_Selection[['WaterLevel', 'Discharge']], on = 'WaterLevel')
+DISCHARGE = pd.merge(df1, Ratings_Selection, on = 'WaterLevel', how = 'left')
+#FLOW_MATCHES = pd.merge_asof(matches, FLOW_OBS[['Date', 'Parameter', 'Parameter_Value']].sort_values('Date'), on=['Date'], tolerance=pd.Timedelta('1h'))
+#DISCHARGE = pd.merge_asof(df1, Ratings_Selection[['WaterLevel', 'Discharge']].sort_values('WaterLevel'), on=['WaterLevel'])
+print(df1)
+print('discharge')
+print(df1)
+print('ratings Selection')
+print(DISCHARGE)
+
+initial_Q = DISCHARGE['Discharge'].head(1)
+final_Q = DISCHARGE['Discharge'].tail(1)
+print('initial q')
+print(initial_Q)
+print('final q')
+print(final_Q)
+
+initial_offset = pd.merge(initial_Q, Ratings_Selection, on= 'Discharge', how = 'left')
+print(initial_offset)
+final_offset = pd.merge(final_Q, Ratings_Selection, on='Discharge', how = 'left')
+print(final_offset)
+
+data_First = {'Discharge':  [FIRST_Q]}
+data_Last = {'Discharge': [LAST_Q]}
+                                     
+
+FIRST = pd.DataFrame(data_First, columns = ['Discharge'])
+
+print('First')
+print(FIRST)
+LAST = pd.DataFrame(data_Last, columns = ['Discharge'])
+
+print('last')
+print(LAST)
+
+OBS_INT_OFFSET = pd.merge_asof(FIRST, Ratings_Selection.sort_values('Discharge'), on = 'Discharge', allow_exact_matches=False, direction='nearest')
+OBS_FIN_OFFSET = pd.merge_asof(LAST, Ratings_Selection.sort_values('Discharge'), on = 'Discharge', allow_exact_matches=False, direction='nearest')
+
+print('obs int offset')
+print(OBS_INT_OFFSET)
+print('discharge wl')
+print(DISCHARGE['WaterLevel'].head(1))
+print('obs fin offset')
+print(OBS_FIN_OFFSET)
+
+INITIAL_Q_CORRECTION = float(OBS_INT_OFFSET['WaterLevel'])-float(DISCHARGE['WaterLevel'].head(1))
+###########THIS IS A PLACE HOLDER AS MY TEST DATA DOES NOT ALLIGH WITH A FLOW OBSERVATION
+#INITIAL_Q_CORRECTION = float(.04)
+FINAL_Q_CORRECTION = float(OBS_FIN_OFFSET['WaterLevel'])-float(DISCHARGE['WaterLevel'].tail(1))
+print('initial q correction')
+print(INITIAL_Q_CORRECTION)
+print('final q correction')
+print(FINAL_Q_CORRECTION)
+
+
+################### DISCHARGE OFFSET ##########################################
+
+Q_x = [1, rows[0]]
+
+#print(rows[0])
+
+
+print ('X discharge')
+print(Q_x)
+Q_y = [INITIAL_Q_CORRECTION,FINAL_Q_CORRECTION]
+#((df1.iloc[0,6])-INITIAL_Q_CORRECTION)
+print('Y for @')
+print(Q_y)
+
+print('b')
+
+# Calculate the coefficients. This line answers the initial question. 
+Qcoefficients = np.polyfit(Q_x,Q_y, 1)
+
+# Print the findings
+print('a = ')
+print(Qcoefficients[0])
+print( 'b = ')
+print(Qcoefficients[1])
+
+# Let's compute the values of the line...
+Qpolynomial = np.poly1d(Qcoefficients)
+print('polynomial')
+print(Qpolynomial)
+
+
+DISCHARGE.rename(columns={"WaterLevel": "Origional WaterLevel"})
+
+DISCHARGE['WaterLevel'] = ((((Qcoefficients[0]*df1.index)+Qcoefficients[1]))+DISCHARGE['WaterLevel']).round(2)
+
+Ratings_Selection.rename(columns={"Discharge": "Corrected Discharge"},inplace=True)
+#Ratings_Selection.to_csv(r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\ratings_Selection.csv")
+CORRECTED_DISCHARGE = pd.merge(DISCHARGE, Ratings_Selection, on = 'WaterLevel', how = 'left')
+
+Ratings_Selection.rename(columns={"Corrected Discharge": "Discharge"})
+print('Corrected discharge')
+print(CORRECTED_DISCHARGE)
+print('discharge')
+print(DISCHARGE)
+
+'''
+#initial_correction = float(DISCHARGE['WaterLevel'].head(1))
+initial_correction = float(initial_offset['WaterLevel'].tail(1))
+print('initial correction')
+print(initial_correction)
+'''
+################# DUMB TEXT DEFINATIONS ########################################
+
+tail_date = pd.to_datetime(DISCHARGE.iloc[-1,0], format='%Y%m%d', errors='ignore').date()
+tail_date_time = pd.to_datetime(DISCHARGE.iloc[-1,0], format='%Y%m%d', errors='ignore')
+output_filename = Site+"_"+str(tail_date)
+
+head_date = pd.to_datetime(DISCHARGE.iloc[0,0], format='%Y%m%d', errors='ignore').date()
+head_date_time = pd.to_datetime(DISCHARGE.iloc[0,0], format='%Y%m%d', errors='ignore')
+
+
+OUTPUT = pd.DataFrame(CORRECTED_DISCHARGE, columns = ['Date_Time','Instrument','Staff_Corrected','Corrected Discharge'])
+OUTPUT.set_index('Date_Time', inplace=True)
+
+INITIAL_Q_CORRECTION = round(INITIAL_Q_CORRECTION, 2)
+FINAL_Q_CORRECTION = round(FINAL_Q_CORRECTION, 2)
+
+
+
+
+#tail_string=pd.DataFrame.to_string(tail, buf=None, columns=['Date_Time'], index=None, header=None)
+
+CORRECTED_DISCHARGE.to_csv(r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\Corrected_Discharge.csv")
+
+
+
+initial_Q.reset_index()
+final_Q.reset_index()
+OUTPUT.reset_index()
+#OUTPUT_string=pd.DataFrame.to_string(OUTPUT, buf=None, columns=['Date_Time','Instrument','Staff_Corrected','Corrected Discharge'], index=None, header=None)
+#Discharge statitsitcs
+print('Discharge Statistics')
+print('initial_Q')
+print(CORRECTED_DISCHARGE['Staff_Corrected'].iloc[0]-Rating_Offset)
+print('final_Q')
+print(CORRECTED_DISCHARGE['Staff_Corrected'].iloc[-1]-Rating_Offset)
+print('corrected q initial')
+print(CORRECTED_DISCHARGE['WaterLevel'].iloc[0])
+print('corrected q final')
+print(CORRECTED_DISCHARGE['WaterLevel'].iloc[-1])
+INITIAL_PRECENT = abs(((((CORRECTED_DISCHARGE['Staff_Corrected'].iloc[0]-Rating_Offset)-(CORRECTED_DISCHARGE['WaterLevel'].iloc[0]))/(CORRECTED_DISCHARGE['Staff_Corrected'].iloc[0]-Rating_Offset))*100).round(2))
+print('initial precent')
+print(INITIAL_PRECENT)
+FINAL_PRECENT = abs(((((CORRECTED_DISCHARGE['Staff_Corrected'].iloc[-1]-Rating_Offset)-(CORRECTED_DISCHARGE['WaterLevel'].iloc[-1]))/(CORRECTED_DISCHARGE['Staff_Corrected'].iloc[-1]-Rating_Offset))*100).round(2))
+
+
+
+
+
+################## COMPUTE DISCHARGE ##########################################
+###################### PLOT ######################################################
+layout1 = go.Layout(width=1010, height=750, yaxis_title='Water Level Feet', plot_bgcolor='rgba(0,0,0,0)', 
+                    margin_b=100, #increase the bottom margin to have space for caption
+                    annotations = [dict(xref='paper', yref='paper', x=0, y=-0.09, showarrow=False, text ='First Log: '+str(head_date_time)), 
+                                   dict(xref='paper', yref='paper', x=0, y=-0.11, showarrow=False, text ='Staff: '+str(P1C)),
+                                   dict(xref='paper', yref='paper', x=0, y=-0.13, showarrow=False, text ='Instrument: '+str(P1B)),
+                                   dict(xref='paper', yref='paper', x=0, y=-0.15, showarrow=False, text = 'Initial Offset '+str(Staff_Offset_1_Round)),
+                                   dict(xref='paper', yref='paper', x=1, y=-0.09, showarrow=False, text ='Last Log: '+str(tail_date_time)),
+                                   dict(xref='paper', yref='paper', x=1, y=-0.11, showarrow=False, text ='Staff: '+str(P6C)),
+                                   dict(xref='paper', yref='paper', x=1, y=-0.13, showarrow=False, text ='Instrument: '+str(P6B)),
+                                   dict(xref='paper', yref='paper', x=1, y=-0.15, showarrow=False, text = 'Final Offset '+str(Staff_Offset_2_Round)),
+                                   dict(xref='paper', yref='paper', x=0.5, y=1.15, showarrow=False, text = Site+' WL FEET '+str(head_date)+' - '+str(tail_date)),
+                                   dict(xref='paper', yref='paper', x=0.5, y=-0.15, showarrow=False, text = 'Staff Change '+str(Staff_Change_Round)),
+                                   dict(xref='paper', yref='paper', x=0, y=1.08, showarrow=False, text = FIRST_MEASURE_INFO),
+                                   dict(xref='paper', yref='paper', x=1, y=1.08, showarrow=False, text = LAST_MEASURE_INFO),
+                                   dict(xref='paper', yref='paper', x=0, y=1.06, showarrow=False, text = FIRST_QM),
+                                   dict(xref='paper', yref='paper', x=1, y=1.06, showarrow=False, text = LAST_QM),
+                                   dict(xref='paper', yref='paper', x=0, y=1.04, showarrow=False, text = 'QR: '+str(OUTPUT.iloc[0,2])),
+                                   dict(xref='paper', yref='paper', x=1, y=1.04, showarrow=False, text = 'QR: '+str(OUTPUT.iloc[-1,2])),
+                                   dict(xref='paper', yref='paper', x=0.5, y=1.10, showarrow=False, text = 'Rating: '+str(Rating_ID)),
+                                   dict(xref='paper', yref='paper', x=0.5, y=1.08, showarrow=False, text = 'IRC: '+str(INITIAL_Q_CORRECTION)+'      Precent Change: '+str(INITIAL_PRECENT)+'%'),
+                                   dict(xref='paper', yref='paper', x=0.5, y=1.06, showarrow=False, text = 'FRC: '+str(FINAL_Q_CORRECTION)+'        Precent Change: '+str(FINAL_PRECENT)+'%'),
+                                   dict(xref='paper', yref='paper', x=0.5, y=1.04, showarrow=False, text = 'Rating Shift/Log: '+str(FINAL_Q_CORRECTION-INITIAL_Q_CORRECTION)+' / '+str(rows[0]))])
+    #FIRST_MEASURE_INFO = ' '
+    #LAST_MEASURE_INFO = ' '
+    #FIRST_Q = ' '
+    #LAST_Q = ' ' 
+    #FIRST_QM = ' '
+    #LAST_QM 
+                  
+
+
+
+
+fig = go.Figure(layout=layout1)
+#fig.add_trace(go.Scatter(
+                #x=output['Date_Time_String'],
+                #y=output['WL FEET'],
+                #line_color='grey',
+                #opacity=0.8,
+               # name="WL FEET"  ))
+fig.add_trace(go.Scatter(
+                x=CORRECTED_DISCHARGE['Date_Time'],
+                y=CORRECTED_DISCHARGE['Corrected Discharge'],
+                line_color='black',
+                opacity=0.5,
+                name="Discharge",  ))
+
+
+fig.update_xaxes(showline=True, linewidth=.5, linecolor='black', mirror=True)
+fig.update_yaxes(showline=True, linewidth=.5, linecolor='black', mirror=True)
+
+fig.update_xaxes(showgrid=False)
+fig.update_yaxes(showgrid=False)
+
+fig.show()
+
+fig.write_image("W:\STS\hydro\GAUGE\Temp\Ian's Temp\\"+output_filename+".pdf")
+
+
+print('pdf saved')
+
+#############opens file#####
+print('output')
+#OUTPUT.reset_index()
+#OUTPUT['Date_Time_STR'] = OUTPUT['Date_Time'].dt.strftime('%m/%d/%Y %H:%M:%S')
+#print('output string')
+#print(OUTPUT)
+
+
+
+OUTPUT.reset_index(inplace=True)
+OUTPUT['Date_Time'] = OUTPUT['Date_Time'].dt.strftime('%m/%d/%Y %H:%M:%S')
+OUTPUT.set_index('Date_Time', inplace=True)
+
+######### creates opacity column
+
+OBS['opacity']=OBS.index/OBS.index[-1]
+print(OBS)
+
+
+#OUTPUT.index = pd.to_datetime(OUTPUT.index, format = '%Y/%m/%d', copy=True)
+#OUTPUT.index.astype(str, copy = False)
+#OUTPUT.index.strftime("%Y/%m/%d")
+print(OUTPUT)
+
+OUTPUT.to_csv(r"W:\STS\hydro\GAUGE\Temp\Ian's Temp\\"+output_filename+".csv")
+
+webbrowser.open_new("W:\STS\hydro\GAUGE\Temp\Ian's Temp\\"+output_filename+".pdf")
+
+########### Rating Analysis #########################
+Rating.reset_index()
+print('Rating')
+print(Rating)
+
+Scatter_Discharge = OUTPUT['Corrected Discharge']
+Scatter_Stage_Offset = OUTPUT['Staff_Corrected']
+
+
+
+Rating_Discharge = Rating['Discharge']
+Rating_Stage_Offset = (Rating['WaterLevel'])
+
+
+#Rating_Offset
+
+#analysis = go.Figure(data=go.Scatter(x=Rating_Discharge, y=Rating_Stage_Offset, mode='markers'))
+#analysis = go.Figure(data=go.Scatter(y=Scatter_Stage_Offset, x=Scatter_Discharge, mode='markers'))
+
+#layout = go.Layout(yaxis=dict(scaleanchor="x", scaleratio=1))
+'''
+colorscale = ['#7A4579', '#D56073', 'rgb(236,158,105)', (1, 1, 0.2), (0.98,0.98,0.98)]
+
+analysis = ff.create_2d_density(
+    Scatter_Stage_Offset, Scatter_Discharge, colorscale=colorscale,
+    hist_color='rgb(255, 237, 222)', point_size=3)
+'''
+analysis=go.Figure(data=go.Scatter(
+                y=Scatter_Stage_Offset,
+                x=Scatter_Discharge,
+                mode='markers',
+                marker=dict(
+                        color='Green',
+                        size=3),
+                opacity=0.5,
+                name="Observations",  ))
+'''
+analysis=go.Figure(data=go.Scatter(
+                y=Rating_Stage_Offset,
+                x=Rating_Discharge,
+                line_color='black',
+                opacity=0.5,
+                name="Rating",  ))
+'''
+analysis.add_trace(go.Scatter(
+                y=(OBS['Stage_Feet']),
+                x=OBS['Parameter_Value'],
+                mode='markers',
+                marker=dict(
+                        color='Blue',
+                        size=5,
+                        opacity=OBS['opacity']),
+                name="Rating",  ))
+
+
+analysis.update_layout(xaxis_type="log", yaxis_type="log", yaxis=dict(scaleanchor="x", scaleratio=1), plot_bgcolor='rgba(0,0,0,0)')
+#analysis.update_layout(xaxis_type="log", yaxis_type="log")
+
+analysis.add_trace(go.Scatter(
+                y=(Rating_Stage_Offset+Rating_Offset),
+                x=Rating_Discharge,
+                line_color='black',
+                opacity=.5,
+                name="Rating",  ))
+
+analysis.update_xaxes(showline=True, linewidth=.5, linecolor='black', mirror=True)
+analysis.update_yaxes(showline=True, linewidth=.5, linecolor='black', mirror=True)
+
+analysis.update_xaxes(showgrid=False)
+analysis.update_yaxes(showgrid=False)
+
+analysis.show()
