@@ -1,0 +1,225 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu May 14 15:53:33 2020
+
+@author: IHiggins
+"""
+
+# -*- coding: utf-8 -*-
+"""
+Created on Thu May  7 14:45:37 2020
+
+@author: IHiggins
+"""
+
+import webbrowser
+import os
+from datetime import date
+import tkinter
+import fuzzy_pandas as fpd
+import tkinter as tk
+from tkinter import ttk
+import tkinter as tk
+from tkinter import ttk
+import matplotlib.pyplot as plt
+from subprocess import call
+import numpy as np
+import matplotlib.pyplot as plt
+import pyodbc
+from scipy import stats
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
+import pandas as pd
+from matplotlib import pyplot as plt
+import plotly.figure_factory as ff
+from tkinter import *
+from tkinter.ttk import *
+import matplotlib
+from matplotlib.backend_bases import key_press_handler
+from matplotlib.figure import Figure
+import numpy as np
+import plotly.io as pio #plotly renderer
+pio.renderers.default = "browser"
+import plotly.graph_objects as go
+import tkinter as tk
+from tkinter import simpledialog
+from tkinter import *   ## notice lowercase 't' in tkinter here
+from tkinter import filedialog
+import pandas as pd
+from datetime import datetime
+from datetime import timedelta
+import subprocess, sys
+
+
+conn = pyodbc.connect('Driver={SQL Server};'
+                      'Server=NRDOSQLPrX01;'
+                      'Database=gData;'
+                      'Trusted_Connection=yes;')
+########################## 58A ######################
+Site =865
+Rating = '31i_08'
+Offset = 1.1
+
+#NEW RATING
+NEW= {'DISCHARGE': [0.48,0.55,0.63,3.42,14.63,114.89], 'STAGE': [0.18,0.22,0.26,0.5,0.85,1.39]}
+NEW_RATING = pd.DataFrame(data=NEW)
+MAX_Q = 400
+MIN_S = .1
+
+
+NEW_RATING['LOG_DISCHARGE'] = np.log(NEW_RATING['DISCHARGE'])
+NEW_RATING['LOG_STAGE'] = np.log(NEW_RATING['STAGE'])
+print(NEW_RATING)
+
+# Define the known points
+#DISCHARGE
+x = [NEW_RATING['LOG_DISCHARGE'].iloc[-2], NEW_RATING['LOG_DISCHARGE'].iloc[-1]]
+#STAGE
+y = [NEW_RATING['LOG_STAGE'].iloc[-2], NEW_RATING['LOG_STAGE'].iloc[-1]]
+
+# Calculate the coefficients. This line answers the initial question. 
+coefficients = np.polyfit(x, y, 1)
+MAX_S = np.exp(((coefficients[0]*np.log(MAX_Q))+coefficients[1]))
+
+
+# Define the known points
+#DISCHARGE
+
+x = [NEW_RATING['LOG_DISCHARGE'].iloc[0], NEW_RATING['LOG_DISCHARGE'].iloc[1]]
+#STAGE
+y = [NEW_RATING['LOG_STAGE'].iloc[0], NEW_RATING['LOG_STAGE'].iloc[1]]
+
+# Calculate the coefficients. This line answers the initial question. 
+
+
+coefficients = np.polyfit(x, y, 1)
+
+MIN_Q = np.exp(((np.log(MIN_S)-coefficients[1])/coefficients[0]))
+print('MIN_Q')
+print(MIN_Q)
+
+EXTEND = {'DISCHARGE': [MIN_Q, MAX_Q], 'STAGE': [MIN_S, MAX_S]}
+EXTEND_DF = pd.DataFrame(data=EXTEND)
+print(EXTEND_DF)
+NEW_RATING=NEW_RATING.append(EXTEND_DF)
+NEW_RATING.sort_values(by=['STAGE'], inplace=True)
+print(NEW_RATING)
+
+
+
+
+#NEW['OFFSET']=(NEW['STAGE']-Offset)
+
+DF1 = pd.read_sql_query('select G_ID, RatingNumber, WaterLevel, Discharge from tblFlowRatings WHERE G_ID = '+str(Site)+';',conn)
+DF1 = DF1[DF1['RatingNumber'] == str(Rating)]
+DF1.set_index('WaterLevel', inplace=True)
+DF1.sort_index(ascending=True, inplace=True)
+DF1.reset_index(inplace=True)
+
+
+
+DF1_PARAMETER_OBS = pd.read_sql_query('select G_ID, FieldVisit_ID, AutoDTStamp, Parameter, Parameter_Value from tblFieldData WHERE G_ID = '+str(Site)+';',conn)
+DF1_Site_Q = DF1_PARAMETER_OBS[DF1_PARAMETER_OBS['Parameter'] == 2].copy()
+DF1_Field_OBS = pd.read_sql_query('select Stage_Feet, Measurement_Number, FieldVisit_ID from tblFieldVisitInfo WHERE G_ID = '+str(Site)+';',conn)
+DF1_FLOW_MATCHES = pd.merge(DF1_Field_OBS, DF1_Site_Q[['FieldVisit_ID', 'Parameter_Value']], on='FieldVisit_ID')
+
+
+
+DF1_FLOW_MATCHES['opacity']=DF1_FLOW_MATCHES.index/DF1_FLOW_MATCHES.index[-1]
+
+
+OUTPUT_DF = pd.DataFrame()
+OUTPUT_DF['STAGE'] = (NEW_RATING['STAGE']+float(Offset)).round(2)
+OUTPUT_DF['OFFSET'] = Offset
+OUTPUT_DF['STAGE OFFSET'] = NEW_RATING['STAGE'].round(2)
+OUTPUT_DF['DISCHARGE'] = NEW_RATING['DISCHARGE'].round(2)
+print(OUTPUT_DF)
+
+
+layout1 = go.Layout(width=1000, height=600, yaxis_title='Water Level', plot_bgcolor='rgba(0,0,0,0)')
+
+fig = go.Figure(layout=layout1)
+'''
+fig.add_trace(go.Scatter(
+                x=DF1['Discharge'],
+                #x=DF58A['WaterLevel']+.3,
+                y=DF1['WaterLevel'],
+                line_color='Blue',
+                opacity=0.5,
+                name=str(Rating)))
+'''
+
+fig.add_trace(go.Scatter(
+                x=NEW_RATING['DISCHARGE'],
+                #x=DF58A['WaterLevel']+.3,
+                y=NEW_RATING['STAGE'],
+                line_color='Black',
+                opacity=0.5,
+                name=str(Rating)))
+
+
+fig.add_trace(go.Scatter(
+                x=DF1_FLOW_MATCHES['Parameter_Value'],
+               # x=DF58F['WaterLevel']+.6,
+                y=DF1_FLOW_MATCHES['Stage_Feet']-Offset,
+                mode='markers',
+               marker=dict(
+                        color='Blue',
+                        size=5,
+                        opacity=DF1_FLOW_MATCHES['opacity']),
+                text=DF1_FLOW_MATCHES['Measurement_Number'],
+                name="Site",  ))
+
+fig.add_trace(go.Scatter(
+                x=NEW_RATING['DISCHARGE'],
+               # x=DF58F['WaterLevel']+.6,
+                y=NEW_RATING['STAGE'],
+                mode='markers',
+               marker=dict(
+                        color='Red',
+                        size=5,
+                        opacity=1),
+                name="Reference Observations",  ))
+
+
+fig.add_trace(go.Scatter(
+                x=EXTEND['DISCHARGE'],
+               # x=DF58F['WaterLevel']+.6,
+                y=EXTEND['STAGE'],
+                mode='markers',
+               marker=dict(
+                        color='Black',
+                        size=5,
+                        opacity=1),
+                name="Projection",  ))
+
+
+fig.update_xaxes(showline=True, linewidth=.5, linecolor='black', mirror=True)
+fig.update_yaxes(showline=True, linewidth=.5, linecolor='black', mirror=True)
+
+#fig.update_xaxes(showgrid=False)
+#fig.update_yaxes(showgrid=False)
+
+fig.update_layout(xaxis_type="log", yaxis_type="log")
+fig.update_xaxes(ticks="outside")
+fig.update_yaxes(ticks="outside")
+
+
+fig.show()
+'''
+fig.write_image("fig.html")
+dist.write_image("dist.pdf")
+stage.write_image("stage.pdf")
+rain.write_image("rain.pdf")
+hist.write_image("hist.pdf")
+
+pdfs = ['Fifteen.pdf', 'dist.pdf', 'stage.pdf', 'rain.pdf', 'hist.pdf']
+
+merger = PdfFileMerger()
+
+for pdf in pdfs:
+    merger.append(pdf)
+
+merger.write("W:\STS\hydro\GAUGE\Temp\Ian's Temp\\"+str(SITE_NUMBER)+" Analysis"+" Water Year "+str(Water_Year)+".pdf")
+merger.close()
+'''
